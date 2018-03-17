@@ -19,7 +19,7 @@
  * Forked from the project: https://github.com/tomasaxerot/SmartThings/tree/master/devicetypes/tomasaxerot/bosch-motion-detector.src
  *
  * v1.0 - added first attempt at implementing "Minimum Duration" (minutes) to prevent rapid active/inactive events
- *
+ * v1.1 - Updated some of the log statements to clarify operation
  *
  */
 import physicalgraph.zigbee.clusters.iaszone.ZoneStatus
@@ -142,7 +142,7 @@ def parse(String description) {
 				// did the user set a minimum duration?
                 if (minDuration > 0) {
                 	state.inMotion = true
-					log.debug "state.inMotion is: $state.inMotion"
+					log.debug "Set state.inMotion to: $state.inMotion"
 					runIn(minDuration * 60, "delayedMotionInactive", [data: getMotionResult("inactive")])
                 }
             } else {
@@ -150,7 +150,7 @@ def parse(String description) {
                 log.debug "Inactive event - only create if duration == 0"
 				if (minDuration == 0) {
                 	state.inMotion = false
-					log.debug "state.inMotion is: $state.inMotion"
+					log.debug "Set state.inMotion to: $state.inMotion"
 					result = map ? createEvent(map) : [:]
                 }
 			}
@@ -159,7 +159,7 @@ def parse(String description) {
             if (map.value == "active") {
             	log.debug "New motion event - already inMotion, rescedule inactive event"
                 state.inMotion = true
-				log.debug "state.inMotion is: $state.inMotion"
+				log.debug "Set state.inMotion to: $state.inMotion"
 				runIn(minDuration * 60, "delayedMotionInactive", [data: getMotionResult("inactive")])
             } else {
             	// we are inMotion, and so we ignore the inactive event!
@@ -193,7 +193,7 @@ def delayedMotionInactive(event_map) {
     log.debug "delayedMotionInactive handler method called with map: $event_map"
 	sendEvent(event_map)
 	state.inMotion = false
-	log.debug "state.inMotion is: $state.inMotion"
+	log.debug "Set state.inMotion to: $state.inMotion"
 }
 
 private Map parseIasMessage(String description) {
