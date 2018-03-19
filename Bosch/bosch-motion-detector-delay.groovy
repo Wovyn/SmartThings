@@ -18,8 +18,9 @@
  *
  * Forked from the project: https://github.com/tomasaxerot/SmartThings/tree/master/devicetypes/tomasaxerot/bosch-motion-detector.src
  *
+ * v1.2 - added extra checks for null/unconfigured minDuration
+ * v1.1 - updated some of the log statements to clarify operation
  * v1.0 - added first attempt at implementing "Minimum Duration" (minutes) to prevent rapid active/inactive events
- * v1.1 - Updated some of the log statements to clarify operation
  *
  */
 import physicalgraph.zigbee.clusters.iaszone.ZoneStatus
@@ -135,20 +136,21 @@ def parse(String description) {
 	def result = null
 	if (map.name == "motion") {
 		log.debug "state.inMotion is: $state.inMotion"
+		log.debug "minDuration: $minDuration"
 		if (state.inMotion != true) {		// are we NOT inMotion?
 			if (map.value == "active") {
             	log.debug "New motion event - not already inMotion"
 				result = map ? createEvent(map) : [:]
 				// did the user set a minimum duration?
-                if (minDuration > 0) {
+                if (minDuration != null && minDuration > 0) {
                 	state.inMotion = true
 					log.debug "Set state.inMotion to: $state.inMotion"
 					runIn(minDuration * 60, "delayedMotionInactive", [data: getMotionResult("inactive")])
                 }
             } else {
             	// we are NOT inMotion, so handle the inactive event
-                log.debug "Inactive event - only create if duration == 0"
-				if (minDuration == 0) {
+                log.debug "Inactive event - only create if duration == null || duration == 0"
+				if (minDuration == null || minDuration == 0) {
                 	state.inMotion = false
 					log.debug "Set state.inMotion to: $state.inMotion"
 					result = map ? createEvent(map) : [:]
@@ -158,9 +160,13 @@ def parse(String description) {
 			// we are already inMotion, then if it's another active message reschedule the inactive event
             if (map.value == "active") {
             	log.debug "New motion event - already inMotion, rescedule inactive event"
-                state.inMotion = true
-				log.debug "Set state.inMotion to: $state.inMotion"
-				runIn(minDuration * 60, "delayedMotionInactive", [data: getMotionResult("inactive")])
+                if (minDuration != null && minDuration > 0) {
+                	state.inMotion = true
+					log.debug "Set state.inMotion to: $state.inMotion"
+					runIn(minDuration * 60, "delayedMotionInactive", [data: getMotionResult("inactive")])
+                } else {
+					log.debug "Reschedule abort: minDuration null or 0!"
+				}
             } else {
             	// we are inMotion, and so we ignore the inactive event!
             	log.debug "Inactive event - already inMotion, ignoring it!"
